@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product List</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+      body {
+        padding: 20px;
+      }
+      .category-item {
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="category-list">
+        <!-- Categories will be dynamically inserted here -->
+      </div>
+
+      <h1 class="mb-4">Product List</h1>
+
+      <div id="product-list" class="list-group">
+        <!-- Products will be dynamically inserted here -->
+      </div>
+      <h3 class="mb-3">Add Product</h3>
+      <form id="add-product-form" class="mb-4" enctype="multipart/form-data">
+        <div class="form-group">
+          <label for="productName">Product Name</label>
+          <input type="text" class="form-control" id="productName" required />
+        </div>
+        <div class="form-group">
+          <label for="productDescription">Description</label>
+          <textarea class="form-control" id="productDescription" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="productPrice">Price</label>
+          <input type="number" class="form-control" id="productPrice" step="0.01" required />
+        </div>
+        <div class="form-group">
+          <label for="productCategory">Category</label>
+          <select id="productCategory" class="form-control" required>
+            <!-- Categories will be dynamically inserted here -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="productImage">Upload Image</label>
+          <input type="file" class="form-control-file" id="productImage" accept="image/*" />
+        </div>
+        <button type="submit" class="btn btn-primary">Add Product</button>
+      </form>
+    </div>
+
+    <script>
+      const HOST = "http://127.0.0.1:8000";
+      // Function to fetch all
+      async function fetchAll() {
+        await fetchCategories();
+        await fetchProducts();
+      }
+      async function fetchCategories() {
+        try {
+          const response = await axios.get(`${HOST}/products/categories`);
+          const categories = response.data;
+
+          // Populate category list for display
+          const categoryList = document.getElementById("category-list");
+          categoryList.innerHTML = "";
+          for (let i = 0; i < categories.length; i++) {
+            categoryList.innerHTML += `
+          <a href="#" class="badge badge-primary mr-2 d-inline-flex align-items-center" onclick="fetchProducts(${categories[i].id})" style="padding: 10px;">
+            <div class="d-flex align-items-center">
+              <img src="${HOST}${categories[i].image}" alt="${categories[i].name}" class="img-fluid img-thumbnail mr-2" style="max-width: 175px; max-height: 175px;">
+              <span>${categories[i].name} - ${categories[i].popularity}</span>
+            </div>
+          </a>`;
+          }
+
+          // Populate category dropdown in the form
+          const categoryDropdown = document.getElementById("productCategory");
+          categoryDropdown.innerHTML = ""; // Clear dropdown before adding new options
+          categories.forEach((category) => {
+            const option = document.createElement("option");
+            option.value = category.id;
+            option.text = category.name;
+            categoryDropdown.appendChild(option);
+          });
+        } catch (error) {
+          console.error("Error fetching categories:", error);
+        }
+      }
+
+      async function fetchProducts(category_id) {
+        // category_id is optional and defaults to null
+        try {
+          let url = `${HOST}/products/`; // Base API URL for fetching products
+
+          if (category_id) {
+            url += `?category_id=${category_id}`; // Append category filter if provided
+          }
+
+          const response = await axios.get(url); // Make the GET request to the API
+          const products = response.data;
+          console.log("Fetched products:", products);
+
+          const productList = document.getElementById("product-list");
+          productList.innerHTML = ""; // Clear the list before adding new items
+
+          for (let i = 0; i < products.length; i++) {
+            const product = products[i];
+
+            // Mapping category names for display
+            const categoryNames = product.category.map((cat) => cat.name).join(", ") || "No Category";
+
+            // Create product item element
+            const productItem = document.createElement("a");
+            productItem.className = "list-group-item list-group-item-action";
+            productItem.href = `/front/product.html?id=${product.id}`;
+
+            // Add product details including category names and image
+            productItem.innerHTML = `
+        <strong>${product.name}</strong> - $${product.price}
+        <br><em>Category: ${categoryNames}</em>
+        <br>
+        <img src="${HOST}${product.image}" alt="${product.name}" class="img-thumbnail" style="max-width: 100px; max-height: 100px; margin-top: 5px;">
+      `;
+
+            // Create delete link with an onclick function
+            const deleteLink = document.createElement("a");
+            deleteLink.className = "text-danger ml-3";
+            deleteLink.href = "#"; // Prevent default link behavior
+            deleteLink.innerText = "DELETE";
+            deleteLink.onclick = async (event) => {
+              event.preventDefault(); // Prevent default anchor click behavior
+              if (confirm("Are you sure you want to delete this product?")) {
+                try {
+                  await axios.delete(`${HOST}/products/${product.id}/`); // API URL to delete product
+                  fetchProducts(); // Refresh product list after deletion
+                } catch (error) {
+                  console.error("Error deleting product:", error);
+                  alert("Failed to delete product.");
+                }
+              }
+            };
+
+            // Append delete link and product item to the list
+            productItem.appendChild(deleteLink);
+            productList.appendChild(productItem);
+          }
+        } catch (error) {
+          console.error("Error fetching products:", error);
+          const productList = document.getElementById("product-list");
+          productList.innerHTML = '<div class="alert alert-danger">Failed to load products.</div>';
+        }
+      }
+      // Function to add a new product
+      async function addProduct(event) {
+        event.preventDefault(); // Prevent form submission
+
+        // Gather form data
+        const name = document.getElementById("productName").value;
+        const description = document.getElementById("productDescription").value;
+        const price = document.getElementById("productPrice").value;
+        const categoryId = document.getElementById("productCategory").value; // Selected category
+        const imageFile = document.getElementById("productImage").files[0]; // Image file input
+
+        // Create FormData object to handle file upload
+        const formData = new FormData();
+        formData.append("name", name);
+        formData.append("description", description);
+        formData.append("price", price);
+        formData.append("category", categoryId); // Use 'category_id' instead of 'category'
+        if (imageFile) {
+          formData.append("image", imageFile); // Add image if a file is selected
+        }
+
+        try {
+          await axios.post(`${HOST}/products/`, formData, {
+            headers: {
+              "Content-Type": "multipart/form-data", // Set correct header for file uploads
+            },
+          });
+          fetchProducts(); // Refresh product list
+          document.getElementById("add-product-form").reset(); // Reset form fields
+        } catch (error) {
+          console.error("Error adding product:", error);
+          alert("Failed to add product.");
+        }
+      }
+
+      // Add event listener for form submission
+      document.getElementById("add-product-form").addEventListener("submit", addProduct);
+
+      // Fetch categories and products on page load
+      window.onload = fetchAll;
+    </script>
+  </body>
+</html>
