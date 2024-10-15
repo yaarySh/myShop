@@ -17,50 +17,93 @@
   </head>
   <body>
     <div class="container">
+      <h1 class="mb-4">Product List</h1>
+
+      <!-- User Name Display -->
+      <div id="user-name" class="mb-3"></div>
+
       <div id="category-list">
         <!-- Categories will be dynamically inserted here -->
       </div>
 
-      <h1 class="mb-4">Product List</h1>
-
       <div id="product-list" class="list-group">
         <!-- Products will be dynamically inserted here -->
       </div>
-      <h3 class="mb-3">Add Product</h3>
-      <form id="add-product-form" class="mb-4" enctype="multipart/form-data">
-        <div class="form-group">
-          <label for="productName">Product Name</label>
-          <input type="text" class="form-control" id="productName" required />
-        </div>
-        <div class="form-group">
-          <label for="productDescription">Description</label>
-          <textarea class="form-control" id="productDescription" required></textarea>
-        </div>
-        <div class="form-group">
-          <label for="productPrice">Price</label>
-          <input type="number" class="form-control" id="productPrice" step="0.01" required />
-        </div>
-        <div class="form-group">
-          <label for="productCategory">Category</label>
-          <select id="productCategory" class="form-control" required>
-            <!-- Categories will be dynamically inserted here -->
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="productImage">Upload Image</label>
-          <input type="file" class="form-control-file" id="productImage" accept="image/*" />
-        </div>
-        <button type="submit" class="btn btn-primary">Add Product</button>
-      </form>
+
+      <div id="add-product-container" style="display: none">
+        <h3 class="mb-3">Add Product</h3>
+        <form id="add-product-form" class="mb-4" enctype="multipart/form-data">
+          <div class="form-group">
+            <label for="productName">Product Name</label>
+            <input type="text" class="form-control" id="productName" required />
+          </div>
+          <div class="form-group">
+            <label for="productDescription">Description</label>
+            <textarea class="form-control" id="productDescription" required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="productPrice">Price</label>
+            <input type="number" class="form-control" id="productPrice" step="0.01" required />
+          </div>
+          <div class="form-group">
+            <label for="productCategory">Category</label>
+            <select id="productCategory" class="form-control" required>
+              <!-- Categories will be dynamically inserted here -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="productImage">Upload Image</label>
+            <input type="file" class="form-control-file" id="productImage" accept="image/*" />
+          </div>
+          <button type="submit" class="btn btn-primary">Add Product</button>
+        </form>
+      </div>
     </div>
 
     <script>
       const HOST = "http://127.0.0.1:8000";
-      // Function to fetch all
+
+      let isStaff = false;
+      // Function to set the Authorization token for axios
+      function setAuthToken(token) {
+        if (token) {
+          axios.defaults.headers.common["Authorization"] = `Token ${token}`;
+        } else {
+          delete axios.defaults.headers.common["Authorization"];
+        }
+      }
+
+      // Function to display the user's name
+      async function setUserName() {
+        const userName = localStorage.getItem("username");
+        const token = localStorage.getItem("token");
+
+        if (userName) {
+          document.getElementById("user-name").innerText = `Welcome, ${userName}!`;
+
+          // Fetch user details to check if the user is an admin
+          try {
+            const response = await axios.get(`${HOST}/users/me/`); // Adjust to your endpoint
+            const userDetails = response.data;
+
+            // Set global isStaff flag if the user is staff
+            isStaff = userDetails.is_staff || userDetails.is_admin;
+
+            if (isStaff) {
+              document.getElementById("add-product-container").style.display = "block"; // Show add product form
+            }
+          } catch (error) {
+            console.error("Error fetching user details:", error);
+          }
+        }
+      }
+
+      // Function to fetch all categories and products
       async function fetchAll() {
         await fetchCategories();
         await fetchProducts();
       }
+
       async function fetchCategories() {
         try {
           const response = await axios.get(`${HOST}/products/categories`);
@@ -71,12 +114,12 @@
           categoryList.innerHTML = "";
           for (let i = 0; i < categories.length; i++) {
             categoryList.innerHTML += `
-          <a href="#" class="badge badge-primary mr-2 d-inline-flex align-items-center" onclick="fetchProducts(${categories[i].id})" style="padding: 10px;">
-            <div class="d-flex align-items-center">
-              <img src="${HOST}${categories[i].image}" alt="${categories[i].name}" class="img-fluid img-thumbnail mr-2" style="max-width: 175px; max-height: 175px;">
-              <span>${categories[i].name} - ${categories[i].popularity}</span>
-            </div>
-          </a>`;
+                    <a href="#" class="badge badge-primary mr-2 d-inline-flex align-items-center" onclick="fetchProducts(${categories[i].id})" style="padding: 10px;">
+                      <div class="d-flex align-items-center">
+                        <img src="${HOST}${categories[i].image}" alt="${categories[i].name}" class="img-fluid img-thumbnail mr-2" style="max-width: 175px; max-height: 175px;">
+                        <span>${categories[i].name} - ${categories[i].popularity}</span>
+                      </div>
+                    </a>`;
           }
 
           // Populate category dropdown in the form
@@ -94,7 +137,6 @@
       }
 
       async function fetchProducts(category_id) {
-        // category_id is optional and defaults to null
         try {
           let url = `${HOST}/products/`; // Base API URL for fetching products
 
@@ -122,32 +164,35 @@
 
             // Add product details including category names and image
             productItem.innerHTML = `
-        <strong>${product.name}</strong> - $${product.price}
-        <br><em>Category: ${categoryNames}</em>
-        <br>
-        <img src="${HOST}${product.image}" alt="${product.name}" class="img-thumbnail" style="max-width: 100px; max-height: 100px; margin-top: 5px;">
-      `;
+              <strong>${product.name}</strong> - $${product.price}
+              <br><em>Category: ${categoryNames}</em>
+              <br>
+              <img src="${HOST}${product.image}" alt="${product.name}" class="img-thumbnail" style="max-width: 100px; max-height: 100px; margin-top: 5px;">
+            `;
 
-            // Create delete link with an onclick function
-            const deleteLink = document.createElement("a");
-            deleteLink.className = "text-danger ml-3";
-            deleteLink.href = "#"; // Prevent default link behavior
-            deleteLink.innerText = "DELETE";
-            deleteLink.onclick = async (event) => {
-              event.preventDefault(); // Prevent default anchor click behavior
-              if (confirm("Are you sure you want to delete this product?")) {
-                try {
-                  await axios.delete(`${HOST}/products/${product.id}/`); // API URL to delete product
-                  fetchProducts(); // Refresh product list after deletion
-                } catch (error) {
-                  console.error("Error deleting product:", error);
-                  alert("Failed to delete product.");
+            // Conditionally add the delete link if the user is staff
+            if (isStaff) {
+              const deleteLink = document.createElement("a");
+              deleteLink.className = "text-danger ml-3";
+              deleteLink.href = "#"; // Prevent default link behavior
+              deleteLink.innerText = "DELETE";
+              deleteLink.onclick = async (event) => {
+                event.preventDefault(); // Prevent default anchor click behavior
+                if (confirm("Are you sure you want to delete this product?")) {
+                  try {
+                    await axios.delete(`${HOST}/products/${product.id}/`); // API URL to delete product
+                    fetchProducts(); // Refresh product list after deletion
+                  } catch (error) {
+                    console.error("Error deleting product:", error);
+                    alert("Failed to delete product.");
+                  }
                 }
-              }
-            };
+              };
+              // Append the delete link to the product item
+              productItem.appendChild(deleteLink);
+            }
 
-            // Append delete link and product item to the list
-            productItem.appendChild(deleteLink);
+            // Append the product item to the list
             productList.appendChild(productItem);
           }
         } catch (error) {
@@ -191,11 +236,13 @@
         }
       }
 
-      // Add event listener for form submission
+      // Set the form submission event listener
       document.getElementById("add-product-form").addEventListener("submit", addProduct);
 
-      // Fetch categories and products on page load
-      window.onload = fetchAll;
+      // Execute on page load
+      setAuthToken(localStorage.getItem("token")); // Set token for axios
+      setUserName(); // Set user name and check user type
+      fetchAll(); // Fetch all categories and products
     </script>
   </body>
 </html>

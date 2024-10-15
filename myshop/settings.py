@@ -12,6 +12,10 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
+import dj_database_url
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-bf*p6yq41@0-q+5zwq#modnuw4v(70oa2n%)y+m=o5@rctk@_e"
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -29,6 +33,14 @@ DEBUG = True
 ALLOWED_HOSTS = ["*"]
 SHELL_PLUS = "ipython"
 
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",  # Protects all views by default
+    ],
+}
 
 # Application definition
 
@@ -40,8 +52,11 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework.authtoken",
     "corsheaders",
     "products",
+    "users",
+    "carts",
 ]
 
 MIDDLEWARE = [
@@ -81,15 +96,22 @@ WSGI_APPLICATION = "myshop.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+from decouple import config
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DATABASE_NAME"),
-        "USER": os.getenv("DATABASE_USER"),
-        "PASSWORD": os.getenv("DATABASE_PASSWORD"),
-        "HOST": os.getenv("DATABASE_HOST"),  # Optional default
-        "PORT": os.getenv("DATABASE_PORT"),  # Optional default
-    }
+    "default": dj_database_url.config(
+        # Replace this value with your local database's connection string.
+        default=os.getenv("DB_URL"),
+        conn_max_age=600,
+    )
+    # "default": {
+    #     "ENGINE": "django.db.backends.postgresql",
+    #     "NAME": config("DATABASE_NAME"),
+    #     "USER": config("DATABASE_USER"),
+    #     "PASSWORD": config("DATABASE_PASSWORD"),
+    #     "HOST": config("DATABASE_HOST", default="localhost"),  # Optional default
+    #     "PORT": config("DATABASE_PORT", default="5432"),  # Optional default
+    # }
     # "default": {
     #         "ENGINE": "django.db.backends.sqlite3",
     #         "NAME": BASE_DIR / "db.sqlite3",

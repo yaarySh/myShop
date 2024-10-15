@@ -10,11 +10,17 @@
       body {
         padding: 20px;
       }
+      img {
+        max-width: 35%;
+        height: auto;
+        margin-bottom: 20px;
+      }
     </style>
   </head>
   <body>
     <div class="container">
       <h1 id="product-name"></h1>
+      <img id="product-image" alt="Product Image" />
       <p id="product-description"></p>
       <h3>Price: $<span id="product-price"></span></h3>
       <button id="delete-button" class="btn btn-danger">Delete Product</button>
@@ -37,6 +43,11 @@
           document.getElementById("product-description").innerText = product.description;
           document.getElementById("product-price").innerText = product.price;
 
+          // Set product image
+          const productImage = document.getElementById("product-image");
+          productImage.src = product.image ? `${HOST}${product.image}` : "placeholder.jpg"; // Use a placeholder if no image URL is available
+          productImage.alt = product.name;
+
           // Set up delete button
           document.getElementById("delete-button").onclick = () => deleteProduct(productId);
         } catch (error) {
@@ -49,7 +60,7 @@
       async function deleteProduct(productId) {
         if (confirm("Are you sure you want to delete this product?")) {
           try {
-            await axios.delete(`http://your-api-url/api/products/${productId}/`); // Replace with your actual API URL
+            await axios.delete(`${HOST}/products/${productId}/`); // Replace with your actual API URL
             alert("Product deleted successfully.");
             window.location.href = "index.html"; // Redirect to the product list page
           } catch (error) {
@@ -58,9 +69,11 @@
           }
         }
       }
-
+      window.onload = () => {
+        const token = localStorage.getItem("token");
+        setAuthToken(token);
+      };
       // Call the function to fetch product details when the page loads
-      window.onload = fetchProduct;
     </script>
   </body>
 </html>
