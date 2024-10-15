@@ -32,7 +32,7 @@ DEBUG = True
 
 CSRF_COOKIE_SECURE = True
 
-ALLOWED_HOSTS = ["https://myshop-n11a.onrender.com"]
+ALLOWED_HOSTS = ["*", "https://myshop-n11a.onrender.com"]
 
 CSRF_TRUSTED_ORIGINS = ["https://myshop-n11a.onrender.com"]
 
