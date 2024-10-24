@@ -51,7 +51,7 @@ def login(request):
         )
     else:
         return Response(
-            {"error": "Invalid credentials"}, status=status.HTTP_400_BAD_REQUEST
+            {"error": "Invalid user or password"}, status=status.HTTP_400_BAD_REQUEST
         )
 
 
